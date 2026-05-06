@@ -9,7 +9,7 @@ general:
 search:
   safe_search: 0
   autocomplete: "duckduckgo"
-  default_lang: "auto"
+  default_lang: "vi"
   formats:
     - html
     - json
@@ -29,8 +29,8 @@ ui:
   infinite_scroll: false
 
 outgoing:
-  request_timeout: 6.0
-  max_request_timeout: 12.0
+  request_timeout: 8.0
+  max_request_timeout: 15.0
   pool_connections: 100
   pool_maxsize: 20
   enable_http2: true
@@ -38,11 +38,27 @@ outgoing:
 engines:
   - name: google
     disabled: false
+    weight: 2
   - name: bing
     disabled: false
   - name: duckduckgo
     disabled: false
+    weight: 2
   - name: brave
     disabled: false
+  - name: qwant
+    disabled: false
+  - name: startpage
+    disabled: false
+  - name: mojeek
+    disabled: false
   - name: wikipedia
+    disabled: false
+  - name: yahoo
+    disabled: false
+  - name: google news
+    disabled: false
+  - name: bing news
+    disabled: false
+  - name: duckduckgo news
     disabled: false
