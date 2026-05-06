@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: jay-eyes
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: SEARXNG_SECRET
+        sync: false
