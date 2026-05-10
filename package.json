@@ -1,0 +1,13 @@
+{
+  "name": "jay-discord-proxy",
+  "version": "1.0.0",
+  "description": "Tiny HTTP CONNECT proxy for Jay's Discord channel (restricted to discord.com targets)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

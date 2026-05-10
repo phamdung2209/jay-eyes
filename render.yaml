@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: jay-eyes
-    runtime: docker
+    name: jay-discord-proxy
+    runtime: node
     plan: free
     region: singapore
-    dockerfilePath: ./Dockerfile
+    branch: proxy
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: /health
     autoDeploy: true
-    envVars:
-      - key: SEARXNG_SECRET
-        sync: false

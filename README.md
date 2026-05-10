@@ -1,51 +1,80 @@
-# jay-eyes
+# jay-discord-proxy (proxy branch)
 
-Self-hosted [SearXNG](https://github.com/searxng/searxng) instance — the eyes of [Jay](https://huggingface.co/spaces/jay-hank/Jay) on the web.
+Tiny HTTP CONNECT proxy that lets Jay (HF Space at `jay-hank/Jay`) reach
+Discord through a network HF doesn't block. **Restricted to `*.discord.com` /
+`*.discord.gg` / `*.discordapp.*` only — not an open proxy.**
 
-Deployed on Render.com (free tier). Jay's openclaw gateway calls this instance for web search.
+## Why
 
-## Files
+HF Spaces block outbound to `discord.com` IPv4 ranges, so Jay's Discord
+channel can't connect direct. Cloudflare Workers can't proxy the persistent
+WebSocket gateway either. Render Web Service (Node runtime, free tier) sits
+in between and tunnels the traffic.
 
-- `Dockerfile` — extends `searxng/searxng:latest`, mounts custom settings + entrypoint wrapper
-- `entrypoint.sh` — substitutes `ultrasecretkey` placeholder with `$SEARXNG_SECRET` env (or generates an ephemeral key) before delegating to the image's official entrypoint
-- `settings.yml` — JSON output enabled, limiter off so Jay's plugin can hit `/search?format=json`
-- `render.yaml` — Render Blueprint: free plan, Docker runtime, Singapore region
+## Architecture
+
+```
+HF Space (Jay)
+  └─ channels.discord.proxy=https://jay-discord-proxy.onrender.com
+        ├── HTTP CONNECT discord.com:443         → REST API
+        └── HTTP CONNECT gateway.discord.gg:443  → WebSocket
+                       │
+                       ▼
+              this Render service
+                       │
+                       ▼
+                  discord.com
+```
+
+## Branch layout
+
+- `main` — SearXNG instance (Jay Eyes search backend)
+- `proxy` — this Discord HTTP CONNECT proxy
+
+Each branch deploys to its own Render service.
 
 ## Deploy on Render
 
-1. Push this repo to GitHub
-2. Render dashboard → **New** → **Blueprint** → connect this repo
-3. Set env var `SEARXNG_SECRET` (any 32+ char random string) when prompted
-4. Render builds and deploys automatically; the URL will be `https://jay-eyes-XXXX.onrender.com`
+1. New → Web Service → connect this repo
+2. Branch: `proxy`
+3. Runtime: Node (auto-detected from `render.yaml`)
+4. Plan: Free
+5. Deploy → URL like `https://jay-discord-proxy.onrender.com`
+
+## Use from Jay
+
+In `openclaw.json`:
+
+```json
+{
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "proxy": "https://jay-discord-proxy.onrender.com"
+    }
+  }
+}
+```
+
+## Keep-warm
+
+Render free tier sleeps after 15 minutes of inactivity. To keep the proxy
+warm so Discord WebSocket doesn't disconnect, set up an UptimeRobot HTTPS
+monitor pinging `/health` every 5 minutes.
+
+## Security
+
+The CONNECT handler refuses any host that doesn't match
+`/^([a-z0-9-]+\.)*(discord\.com|discord\.gg|discordapp\.com|discordapp\.net)$/i`,
+so even if the public URL leaks the worst an outsider can do is talk to
+Discord's own infra (which they could already do directly).
 
 ## Local test
 
 ```bash
-docker build -t jay-eyes .
-docker run --rm -p 8080:8080 -e SEARXNG_SECRET=test123456789 jay-eyes
-curl 'http://localhost:8080/search?q=hello&format=json'
-```
-
-## Wire into Jay
-
-In Jay's `openclaw.json`:
-
-```json
-"plugins": {
-  "entries": {
-    "searxng": {
-      "enabled": true,
-      "config": {
-        "baseUrl": "https://jay-eyes-XXXX.onrender.com",
-        "timeoutMs": 12000,
-        "defaultCount": 5
-      }
-    }
-  }
-},
-"tools": {
-  "web": {
-    "search": { "provider": "searxng" }
-  }
-}
+npm install
+PORT=8080 npm start
+# in another shell:
+curl --proxy http://127.0.0.1:8080 https://discord.com/api/v10/gateway
+# should return: {"url":"wss://gateway.discord.gg"}
 ```
