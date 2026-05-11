@@ -297,3 +297,8 @@ function chunkText(text, maxLen) {
 
   return chunks;
 }
+
+client.login(DISCORD_BOT_TOKEN).catch((err) => {
+  console.error("Discord login failed:", err);
+  process.exit(1);
+});
