@@ -8,7 +8,7 @@ Deployed on Render.com (free tier). Jay's openclaw gateway calls this instance f
 
 - `Dockerfile` — extends `searxng/searxng:latest`, mounts custom settings + entrypoint wrapper
 - `entrypoint.sh` — substitutes `ultrasecretkey` placeholder with `$SEARXNG_SECRET` env (or generates an ephemeral key) before delegating to the image's official entrypoint
-- `settings.yml` — tuned for Jay: VI default lang, per-engine timeouts, social-SEO honeypots blocked, JSON output enabled
+- `settings.yml` — tuned for Jay: EN default lang, per-engine timeouts, social-SEO honeypots blocked, JSON output enabled
 - `limiter.toml` — bot-detection rules; only used when `server.limiter: true` (off by default — Jay rate-limits upstream)
 - `render.yaml` — Render Blueprint: free plan, Docker runtime, Singapore region
 
