@@ -1,6 +1,11 @@
+# Jay Eyes — SearXNG settings for Jay/OpenClaw on Render.
+# Inherits upstream defaults via `use_default_settings: true` and only
+# overrides what matters; new engines / security fixes ship for free.
+
 use_default_settings: true
 
 general:
+  debug: false
   instance_name: "Jay Eyes"
   contact_url: false
   enable_metrics: false
@@ -10,55 +15,149 @@ search:
   safe_search: 0
   autocomplete: "duckduckgo"
   default_lang: "vi"
+  ban_time_on_fail: 5
+  max_ban_time_on_fail: 120
+  # JSON is what Jay/OpenClaw consumes. HTML stays on for debugging via
+  # curl, RSS reserved for future use.
   formats:
     - html
     - json
+    - rss
 
 server:
+  # Render's SearXNG default port. Container EXPOSE matches.
+  port: 8080
+  bind_address: "0.0.0.0"
+  # Placeholder — entrypoint substitutes $SEARXNG_SECRET (set on Render
+  # as an env var). SearXNG refuses to boot if the literal value remains.
   secret_key: "ultrasecretkey"
+  # Limiter must stay OFF on Render free tier:
+  #   1) needs a Valkey side-car we don't run;
+  #   2) consumer (Jay) handles per-user rate limits.
   limiter: false
+  # public_instance toggles link_token middleware that injects hashes
+  # into result URLs — would break our JSON consumer.
   public_instance: false
   image_proxy: false
   http_protocol_version: "1.0"
   method: "GET"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Download-Options: noopen
+    X-Robots-Tag: noindex, nofollow
+    Referrer-Policy: no-referrer
 
 ui:
   static_use_hash: true
   default_locale: "en"
   query_in_title: false
   infinite_scroll: false
+  center_alignment: false
+  results_on_new_tab: false
+  search_on_category_select: true
+  hotkeys: default
+  url_formatting: pretty
 
+# Outgoing connections — the single biggest knob for preventing IP bans.
+#   - high pool reuses TLS sockets to Google/Bing/etc.
+#   - tight request_timeout stops a slow engine from pinning a worker.
 outgoing:
-  request_timeout: 8.0
-  max_request_timeout: 15.0
+  request_timeout: 5.0
+  max_request_timeout: 12.0
   pool_connections: 100
   pool_maxsize: 20
   enable_http2: true
+  keepalive_expiry: 30.0
 
+# Engine list — override only specific engines from the upstream defaults.
+# Upstream engines we don't list here keep their defaults.
 engines:
   - name: google
-    disabled: false
+    timeout: 6.0
     weight: 2
   - name: bing
-    disabled: false
+    timeout: 6.0
   - name: duckduckgo
-    disabled: false
+    timeout: 5.0
     weight: 2
   - name: brave
-    disabled: false
+    timeout: 5.0
   - name: qwant
-    disabled: false
-  - name: startpage
-    disabled: false
+    timeout: 5.0
   - name: mojeek
-    disabled: false
+    timeout: 6.0
+  - name: startpage
+    timeout: 6.0
   - name: wikipedia
-    disabled: false
-  - name: yahoo
-    disabled: false
+    timeout: 4.0
+  - name: wikidata
+    timeout: 4.0
+  - name: arxiv
+    timeout: 6.0
+  - name: crossref
+    timeout: 6.0
+  - name: semantic scholar
+    timeout: 6.0
   - name: google news
-    disabled: false
+    timeout: 5.0
   - name: bing news
-    disabled: false
+    timeout: 5.0
   - name: duckduckgo news
-    disabled: false
+    timeout: 5.0
+
+  # Disable noise / abuse-prone categories — they crowd results with
+  # SEO spam, rate-limit Render's egress, or invite legal trouble.
+  - name: youtube
+    disabled: true
+  - name: vimeo
+    disabled: true
+  - name: dailymotion
+    disabled: true
+  - name: soundcloud
+    disabled: true
+  - name: bandcamp
+    disabled: true
+  - name: reddit
+    disabled: true
+  - name: 9gag
+    disabled: true
+  - name: 1337x
+    disabled: true
+  - name: piratebay
+    disabled: true
+  - name: nyaa
+    disabled: true
+  - name: btdigg
+    disabled: true
+  - name: kickass
+    disabled: true
+  - name: solidtorrents
+    disabled: true
+
+# Plugins — search-quality enhancers on, privacy ones off (Jay's
+# consumer strips tracking on its side anyway).
+enabled_plugins:
+  - "Hash plugin"
+  - "Self Information"
+  - "Tracker URL remover"
+  - "Ahmia blacklist"
+  - "Hostnames plugin"
+
+# Hostnames plugin — strip social-media SEO honeypots that flood
+# results without ever giving Jay useful structured content.
+hostnames:
+  remove:
+    - '(.*\.)?pinterest\.com$'
+    - '(.*\.)?quora\.com$'
+    - '(.*\.)?facebook\.com$'
+    - '(.*\.)?instagram\.com$'
+    - '(.*\.)?tiktok\.com$'
+    - '(.*\.)?twitter\.com$'
+    - '(.*\.)?x\.com$'
+
+doi_resolvers:
+  oadoi.org: "https://oadoi.org/"
+  doi.org: "https://doi.org/"
+  doai.io: "https://dissem.in/"
+
+default_doi_resolver: "doi.org"
